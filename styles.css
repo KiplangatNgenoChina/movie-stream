@@ -1286,6 +1286,113 @@ h1, h2 {
   color: var(--accent-red);
 }
 
+/* Mobile layout tweaks */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  .navbar {
+    padding: 0 1rem;
+  }
+
+  .nav-left {
+    gap: 1.25rem;
+  }
+
+  .nav-links {
+    gap: 0.9rem;
+  }
+
+  .nav-links a {
+    font-size: 0.8rem;
+  }
+
+  .nav-right {
+    gap: 0.75rem;
+  }
+
+  .search-container.search-prominent {
+    width: 100%;
+    max-width: none;
+  }
+
+  .search-input-wrap {
+    width: 100%;
+  }
+
+  .hero {
+    height: 75vh;
+    max-height: 640px;
+    min-height: 380px;
+  }
+
+  .hero-content {
+    bottom: 18%;
+    max-width: 90%;
+  }
+
+  .hero-title {
+    font-size: clamp(1.9rem, 7vw, 2.6rem);
+  }
+
+  .hero-description {
+    font-size: 0.9rem;
+  }
+
+  .hero-buttons {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .hero-buttons .btn {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .content-section {
+    padding-inline: 0.75rem;
+  }
+
+  :root {
+    --card-width: 140px;
+    --card-height: 210px;
+  }
+
+  .movie-row {
+    gap: 4px;
+  }
+
+  .search-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0.5rem;
+  }
+
+  .video-content {
+    padding: 0.75rem;
+  }
+
+  .video-wrapper video {
+    max-height: 50vh;
+  }
+
+  .profile-menu {
+    gap: 0.25rem;
+  }
+
+  .profile-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
+}
+
 /* Footer */
 .footer {
   padding: 2rem 4%;
