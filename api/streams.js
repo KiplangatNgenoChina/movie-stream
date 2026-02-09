@@ -4,22 +4,13 @@
 //
 // Expected env vars:
 // - REALDEBRID_KEY: your RealDebrid API key
-// - APP_SHARED_SECRET: long random string shared only with trusted clients
-//
-// The frontend must send the shared secret in the `x-app-secret` header.
 
 export default async function handler(req, res) {
-  const { REALDEBRID_KEY, APP_SHARED_SECRET } = process.env;
+  const { REALDEBRID_KEY } = process.env;
 
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // Simple shared-secret check so only trusted clients can use this endpoint.
-  const clientSecret = req.headers['x-app-secret'];
-  if (!APP_SHARED_SECRET || clientSecret !== APP_SHARED_SECRET) {
-    return res.status(403).json({ error: 'Forbidden' });
   }
 
   const { id, type = 'movie' } = req.query || {};

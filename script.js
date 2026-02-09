@@ -18,24 +18,6 @@ const SUBS_BASE = USE_LOCAL_PROXY ? `${window.location.origin}/subs` : 'https://
 // Current media context for auto subtitle lookup (set when opening stream picker)
 let currentMediaContext = null;
 
-// Shared secret for Vercel /api/streams is NOT stored here. Instead, each user
-// who is allowed to use RealDebrid enters it once, and we keep it only in
-// their localStorage. The backend checks it against APP_SHARED_SECRET.
-const APP_SECRET_STORAGE = 'streamflix_app_secret';
-
-function getAppSecret() {
-  let secret = localStorage.getItem(APP_SECRET_STORAGE);
-  if (!secret) {
-    // Keep this very simple for a small trusted group of users.
-    secret = window.prompt('Enter access key to use RealDebrid streams:') || '';
-    if (!secret) {
-      throw new Error('Access key required to use RealDebrid streams.');
-    }
-    localStorage.setItem(APP_SECRET_STORAGE, secret);
-  }
-  return secret;
-}
-
 // Category config: endpoint, params, isTV, sortByRating (for top rated)
 const categories = {
   trending_movies: { url: `${API_BASE}/trending/movie/day`, params: {}, isTV: false },
@@ -343,20 +325,11 @@ async function getTorrentioStreams(streamId, type = 'movie') {
     throw new Error('No streams found for this title.');
   }
 
-  // Deployed (e.g. Vercel): call our secured backend instead of Torrentio directly
+  // Deployed (e.g. Vercel): call our backend instead of Torrentio directly.
+  // Backend uses REALDEBRID_KEY from env; there is no shared secret to enter.
   const params = new URLSearchParams({ id: String(streamId), type });
-  let appSecret;
-  try {
-    appSecret = getAppSecret();
-  } catch (e) {
-    throw e;
-  }
 
-  const res = await fetch(`/api/streams?${params.toString()}`, {
-    headers: {
-      'x-app-secret': appSecret,
-    },
-  });
+  const res = await fetch(`/api/streams?${params.toString()}`);
   if (!res.ok) {
     throw new Error('Failed to load streams.');
   }
