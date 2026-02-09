@@ -5,6 +5,15 @@ const IMAGE_BASE_HERO = 'https://image.tmdb.org/t/p/w780'; // Larger for hero ba
 const STILL_BASE = 'https://image.tmdb.org/t/p/w300';
 const API_BASE = 'https://api.themoviedb.org/3';
 
+// Auth0 configuration (public values, safe to expose in frontend)
+const AUTH0_DOMAIN = 'dev-gfbbfod3imrzw1sz.us.auth0.com';
+const AUTH0_CLIENT_ID = '1zFRwNNhIoNeNNT0kYwTAFAb2el3EOpS';
+const AUTH0_AUDIENCE = 'https://streamflix-api';
+const ADMIN_EMAIL = 'dickiejohns08@gmail.com'; // Only this account is treated as admin
+
+let auth0Client = null;
+let authUser = null;
+
 // Use local proxy when available (run server.py), else CORS proxy
 const USE_LOCAL_PROXY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const CORS_PROXY = 'https://corsproxy.io/?';
@@ -959,44 +968,37 @@ profileAvatar?.addEventListener('click', (e) => {
 
 document.addEventListener('click', () => profileMenu?.classList.remove('open'));
 
-// Admin Modal (Settings hidden behind Admin)
-const ADMIN_PASSWORD = 'Kips6868';
+// Admin Modal (Settings hidden behind Auth0 admin login)
 const adminModal = document.getElementById('admin-modal');
-const adminPasswordModal = document.getElementById('admin-password-modal');
-const adminPasswordInput = document.getElementById('admin-password-input');
-const adminPasswordError = document.getElementById('admin-password-error');
-const adminPasswordSubmit = document.getElementById('admin-password-submit');
 const adminLink = document.getElementById('admin-link');
 const adminSettingsBtn = document.getElementById('admin-settings-btn');
 
-adminLink?.addEventListener('click', (e) => {
-  e.preventDefault();
-  profileMenu?.classList.remove('open');
-  adminPasswordModal?.classList.add('active');
-  adminPasswordInput?.focus();
-  adminPasswordInput.value = '';
-  adminPasswordError?.style.setProperty('display', 'none');
-});
-
-adminPasswordModal?.querySelector('.admin-password-close')?.addEventListener('click', () => {
-  adminPasswordModal?.classList.remove('active');
-});
-adminPasswordModal?.querySelector('.modal-backdrop')?.addEventListener('click', () => {
-  adminPasswordModal?.classList.remove('active');
-});
-
-function checkAdminPassword() {
-  if (adminPasswordInput?.value === ADMIN_PASSWORD) {
-    adminPasswordModal?.classList.remove('active');
-    adminModal?.classList.add('active');
-  } else {
-    adminPasswordError?.style.setProperty('display', 'block');
-  }
+function isCurrentUserAdmin() {
+  return !!authUser && authUser.email === ADMIN_EMAIL;
 }
 
-adminPasswordSubmit?.addEventListener('click', checkAdminPassword);
-adminPasswordInput?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') checkAdminPassword();
+adminLink?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  profileMenu?.classList.remove('open');
+
+  if (!auth0Client) return;
+
+  const isAuthenticated = await auth0Client.isAuthenticated();
+  if (!isAuthenticated) {
+    await auth0Client.loginWithRedirect({
+      authorizationParams: {
+        redirect_uri: window.location.origin,
+        audience: AUTH0_AUDIENCE,
+      },
+    });
+    return;
+  }
+
+  if (isCurrentUserAdmin()) {
+    adminModal?.classList.add('active');
+  } else {
+    alert('You are signed in but not an admin.');
+  }
 });
 
 document.getElementById('account-link')?.addEventListener('click', (e) => {
@@ -1005,9 +1007,20 @@ document.getElementById('account-link')?.addEventListener('click', (e) => {
   document.getElementById('account-modal')?.classList.add('active');
 });
 
-document.getElementById('signout-link')?.addEventListener('click', (e) => {
+document.getElementById('signout-link')?.addEventListener('click', async (e) => {
   e.preventDefault();
   profileMenu?.classList.remove('open');
+  if (auth0Client) {
+    const isAuthenticated = await auth0Client.isAuthenticated();
+    if (isAuthenticated) {
+      auth0Client.logout({
+        logoutParams: {
+          returnTo: window.location.origin,
+        },
+      });
+      return;
+    }
+  }
   document.getElementById('signout-modal')?.classList.add('active');
 });
 
@@ -1062,12 +1075,47 @@ document.addEventListener('keydown', (e) => {
     closeStreamModal();
     closeEpisodeModal();
     adminModal?.classList.remove('active');
-    adminPasswordModal?.classList.remove('active');
     document.getElementById('account-modal')?.classList.remove('active');
     document.getElementById('signout-modal')?.classList.remove('active');
     settingsModal?.classList.remove('active');
   }
 });
+
+function updateProfileUI() {
+  const avatar = document.querySelector('.profile-avatar');
+  if (!avatar) return;
+  if (authUser?.name || authUser?.email) {
+    const src = (authUser.name || authUser.email).trim();
+    avatar.textContent = src.charAt(0).toUpperCase();
+  } else {
+    avatar.textContent = 'U';
+  }
+}
+
+async function initAuth() {
+  if (!window.createAuth0Client) return;
+  auth0Client = await createAuth0Client({
+    domain: AUTH0_DOMAIN,
+    clientId: AUTH0_CLIENT_ID,
+    authorizationParams: {
+      audience: AUTH0_AUDIENCE,
+      redirect_uri: window.location.origin,
+    },
+    cacheLocation: 'localstorage',
+    useRefreshTokens: true,
+  });
+
+  if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+    try {
+      await auth0Client.handleRedirectCallback();
+    } catch {}
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  const isAuthenticated = await auth0Client.isAuthenticated();
+  authUser = isAuthenticated ? await auth0Client.getUser() : null;
+  updateProfileUI();
+}
 
 // Row titles for restore (matches content rows order)
 const ROW_TITLES = [
@@ -1085,5 +1133,6 @@ function resetSearchUI() {
 }
 
 // Init (show loading screen only on first open)
+initAuth().catch(() => {});
 loadMovies(true);
 attachVolumeControl(document.querySelector('.video-wrapper'));
