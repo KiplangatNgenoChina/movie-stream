@@ -712,9 +712,10 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
       return;
     }
 
-    // Sort streams by quality (4K, 1080p, 720p, etc.) before rendering
+    // Sort streams by quality (4K, 1080p, 720p, etc.) and format (MP4 first for Firefox)
     const withQuality = streams.map((s) => {
       const text = `${s.name || ''} ${s.title || ''}`.toLowerCase();
+      const isMp4 = /\.mp4(\?|$)/i.test(s.url || '') || text.includes('.mp4');
       let quality = 'Other';
       let rank = 99;
       if (/1080p/.test(text)) {
@@ -727,25 +728,29 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
         quality = '480p';
         rank = 3;
       } else if (/2160p|4k|uhd/.test(text)) {
-        // Show 4K after lower-bandwidth options
         quality = '4K';
         rank = 4;
       }
-      return { ...s, _quality: quality, _qualityRank: rank };
+      return { ...s, _quality: quality, _qualityRank: rank, _isMp4: isMp4 };
     });
 
     withQuality
-      .sort((a, b) => a._qualityRank - b._qualityRank)
+      .sort((a, b) => {
+        if (a._qualityRank !== b._qualityRank) return a._qualityRank - b._qualityRank;
+        return (b._isMp4 ? 1 : 0) - (a._isMp4 ? 1 : 0);
+      })
       .slice(0, 40)
       .forEach((s) => {
       const label = (s.name || 'Stream').replace(/\s+/g, ' ').trim();
       const details = (s.title || '').replace(/[\n\r]/g, ' ').slice(0, 80);
+      const formatBadge = s._isMp4 ? '<span class="stream-format-badge">MP4</span>' : '';
       const item = document.createElement('div');
       item.className = 'stream-item';
       item.innerHTML = `
         <div class="stream-item-info">
           <div class="stream-item-name">
             <span class="stream-quality-badge">${s._quality}</span>
+            ${formatBadge}
             <span>${label}</span>
           </div>
           <div class="stream-item-details">${details}${details.length >= 80 ? '…' : ''}</div>
@@ -893,6 +898,15 @@ function attachVolumeControl(wrapper) {
   }
 }
 
+function inferVideoType(stream) {
+  const url = (stream?.url || '').split('?')[0].toLowerCase();
+  const name = `${stream?.name || ''} ${stream?.title || ''}`.toLowerCase();
+  if (url.endsWith('.mp4') || url.endsWith('.m4v') || name.includes('.mp4')) return 'video/mp4';
+  if (url.endsWith('.webm')) return 'video/webm';
+  if (url.endsWith('.mkv') || name.includes('.mkv')) return 'video/x-matroska';
+  return '';
+}
+
 function playStream(stream) {
   streamModal.classList.remove('active');
 
@@ -905,7 +919,24 @@ function playStream(stream) {
     video.playsInline = true;
     video.muted = false;
     video.volume = 1;
-    video.src = stream.url;
+    const type = inferVideoType(stream);
+    if (type) {
+      const source = document.createElement('source');
+      source.src = stream.url;
+      source.type = type;
+      video.appendChild(source);
+    } else {
+      video.src = stream.url;
+    }
+    video.addEventListener('error', () => {
+      const msg = video.error?.message || '';
+      if (msg.includes('format') || msg.includes('MIME') || video.error?.code === 3) {
+        const hint = document.createElement('div');
+        hint.className = 'video-error-hint';
+        hint.innerHTML = 'Firefox may not support this stream format. Try Chrome, or select a stream that ends in .mp4.';
+        wrapper.insertBefore(hint, wrapper.firstChild);
+      }
+    });
     wrapper.innerHTML = '';
     wrapper.appendChild(video);
     wrapper.insertAdjacentHTML('beforeend', '<div class="custom-volume-control"><button class="volume-btn" aria-label="Volume"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button><input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1"><button class="cc-btn" aria-label="Subtitles" title="Subtitles"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H6v-2h12v2z"/></svg></button><div class="subtitle-panel"><div class="subtitle-hint">Loading subtitles...</div><input type="text" class="subtitle-url-input" placeholder="Or paste .vtt URL"><button class="btn btn-play load-subtitle-btn">Load</button></div></div>');
