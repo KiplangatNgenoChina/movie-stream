@@ -15,6 +15,16 @@ let auth0Client = null;
 let authUser = null;
 let authInitPromise = null;
 
+function createAuth0ClientWrapper(options) {
+  if (window.auth0 && typeof window.auth0.createAuth0Client === 'function') {
+    return window.auth0.createAuth0Client(options);
+  }
+  if (typeof window.createAuth0Client === 'function') {
+    return window.createAuth0Client(options);
+  }
+  return Promise.reject(new Error('Auth0 SPA SDK not loaded'));
+}
+
 // Use local proxy when available (run server.py), else CORS proxy
 const USE_LOCAL_PROXY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const CORS_PROXY = 'https://corsproxy.io/?';
@@ -1098,9 +1108,9 @@ function updateProfileUI() {
 
 async function initAuth() {
   if (authInitPromise) return authInitPromise;
-  if (!window.createAuth0Client) return null;
+  if (!window.auth0 && typeof window.createAuth0Client !== 'function') return null;
 
-  authInitPromise = createAuth0Client({
+  authInitPromise = createAuth0ClientWrapper({
     domain: AUTH0_DOMAIN,
     clientId: AUTH0_CLIENT_ID,
     authorizationParams: {
