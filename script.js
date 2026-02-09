@@ -888,75 +888,11 @@ function playStream(stream) {
     return;
   }
 
-  if (stream.infoHash) {
-    // Torrent - play in browser via WebTorrent (connects only to WebRTC peers)
-    const magnet = `magnet:?xt=urn:btih:${stream.infoHash}`;
-    const fileIdx = stream.fileIdx ?? 0;
-    const videoModal = document.getElementById('video-modal');
-    const wrapper = videoModal.querySelector('.video-wrapper');
-    const video = document.createElement('video');
-    video.controls = true;
-    video.playsInline = true;
-    video.muted = false;
-    video.volume = 1;
-    wrapper.innerHTML = '';
-    wrapper.appendChild(video);
-    wrapper.insertAdjacentHTML('beforeend', '<div class="video-loading">Connecting to peers...</div><div class="custom-volume-control"><button class="volume-btn" aria-label="Volume"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button><input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1"><button class="cc-btn" aria-label="Subtitles" title="Subtitles"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H6v-2h12v2z"/></svg></button><div class="subtitle-panel"><div class="subtitle-hint">Loading subtitles...</div><input type="text" class="subtitle-url-input" placeholder="Or paste .vtt URL"><button class="btn btn-play load-subtitle-btn">Load</button></div></div>');
-    videoModal.classList.add('active');
-
-    const CONNECT_TIMEOUT = 45000; // 45 seconds
-    let resolved = false;
-
-    const showTimeoutMessage = () => {
-      if (resolved) return;
-      resolved = true;
-      const loading = document.querySelector('.video-loading');
-      if (!loading) return;
-      loading.innerHTML = `
-        <div class="timeout-message">
-          <p>No WebRTC peers found for this stream.</p>
-          <p>WebTorrent can only connect to browser peers. Try a different stream (e.g. 1080p or 720p often have more peers).</p>
-          <button class="btn btn-play copy-magnet-btn">Copy magnet link</button>
-        </div>
-      `;
-      loading.querySelector('.copy-magnet-btn').addEventListener('click', () => {
-        navigator.clipboard.writeText(magnet);
-        loading.querySelector('.copy-magnet-btn').textContent = 'Copied!';
-      });
-    };
-
-    const startPlayback = () => {
-      const WT = window.WebTorrent || window.WT;
-      if (!WT) return false;
-      const timeout = setTimeout(showTimeoutMessage, CONNECT_TIMEOUT);
-      const client = new WT();
-      client.add(magnet, (torrent) => {
-        const file = torrent.files[fileIdx];
-        if (file) {
-          resolved = true;
-          clearTimeout(timeout);
-          document.querySelector('.video-loading')?.remove();
-          const v = wrapper.querySelector('video');
-          file.renderTo(v);
-          v.muted = false;
-          v.volume = 1;
-          attachVolumeControl(wrapper);
-          autoLoadSubtitles(v, wrapper);
-        }
-      });
-      return true;
-    };
-
-    if (!startPlayback()) {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js';
-      script.onload = () => startPlayback();
-      script.onerror = () => {
-        document.querySelector('.video-loading').textContent = 'WebTorrent failed to load. Try refreshing the page.';
-      };
-      document.head.appendChild(script);
-    }
-  }
+  // If there is no direct URL, don't attempt WebTorrent. Show a friendly error.
+  const videoModal = document.getElementById('video-modal');
+  const wrapper = videoModal.querySelector('.video-wrapper');
+  wrapper.innerHTML = '<div class="video-loading">No direct RealDebrid streams available for this source. Try another stream option.</div>';
+  videoModal.classList.add('active');
 }
 
 function closeStreamModal() {
