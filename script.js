@@ -18,6 +18,24 @@ const SUBS_BASE = USE_LOCAL_PROXY ? `${window.location.origin}/subs` : 'https://
 // Current media context for auto subtitle lookup (set when opening stream picker)
 let currentMediaContext = null;
 
+// Shared secret for Vercel /api/streams is NOT stored here. Instead, each user
+// who is allowed to use RealDebrid enters it once, and we keep it only in
+// their localStorage. The backend checks it against APP_SHARED_SECRET.
+const APP_SECRET_STORAGE = 'streamflix_app_secret';
+
+function getAppSecret() {
+  let secret = localStorage.getItem(APP_SECRET_STORAGE);
+  if (!secret) {
+    // Keep this very simple for a small trusted group of users.
+    secret = window.prompt('Enter access key to use RealDebrid streams:') || '';
+    if (!secret) {
+      throw new Error('Access key required to use RealDebrid streams.');
+    }
+    localStorage.setItem(APP_SECRET_STORAGE, secret);
+  }
+  return secret;
+}
+
 // Category config: endpoint, params, isTV, sortByRating (for top rated)
 const categories = {
   trending_movies: { url: `${API_BASE}/trending/movie/day`, params: {}, isTV: false },
@@ -306,19 +324,46 @@ async function getImdbId(tmdbId, type = 'movie') {
   return data.imdb_id || null;
 }
 
-// Fetch streams from Torrentio (RealDebrid key used server-side when running server.py)
+// Fetch streams from Torrentio.
+// - Local dev (USE_LOCAL_PROXY): Python server.py proxy, RD key in .env on your machine.
+// - Deployed (no local proxy): Vercel /api/streams with backend-only RD key and shared secret.
 async function getTorrentioStreams(streamId, type = 'movie') {
   const streamPath = `stream/${type}/${streamId}.json`;
-  const url = `${TORRENTIO_BASE}/${streamPath}`;
 
+  // Local development: use Python proxy with server-side REALDEBRID_KEY
+  if (USE_LOCAL_PROXY) {
+    const url = `${TORRENTIO_BASE}/${streamPath}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Stream fetch failed');
+      const data = await res.json();
+      const streams = data.streams || [];
+      if (streams.length) return streams;
+    } catch {}
+    throw new Error('No streams found for this title.');
+  }
+
+  // Deployed (e.g. Vercel): call our secured backend instead of Torrentio directly
+  const params = new URLSearchParams({ id: String(streamId), type });
+  let appSecret;
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Stream fetch failed');
-    const data = await res.json();
-    const streams = data.streams || [];
-    if (streams.length) return streams;
-  } catch {}
-  throw new Error('No streams found for this title.');
+    appSecret = getAppSecret();
+  } catch (e) {
+    throw e;
+  }
+
+  const res = await fetch(`/api/streams?${params.toString()}`, {
+    headers: {
+      'x-app-secret': appSecret,
+    },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to load streams.');
+  }
+  const data = await res.json().catch(() => ({}));
+  const streams = data.streams || [];
+  if (!streams.length) throw new Error('No streams found for this title.');
+  return streams;
 }
 
 // Row carousel navigation
