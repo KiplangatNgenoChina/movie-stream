@@ -712,14 +712,41 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
       return;
     }
 
-    streams.slice(0, 40).forEach((s) => {
+    // Sort streams by quality (4K, 1080p, 720p, etc.) before rendering
+    const withQuality = streams.map((s) => {
+      const text = `${s.name || ''} ${s.title || ''}`.toLowerCase();
+      let quality = 'Other';
+      let rank = 99;
+      if (/2160p|4k|uhd/.test(text)) {
+        quality = '4K';
+        rank = 0;
+      } else if (/1080p/.test(text)) {
+        quality = '1080p';
+        rank = 1;
+      } else if (/720p/.test(text)) {
+        quality = '720p';
+        rank = 2;
+      } else if (/480p/.test(text)) {
+        quality = '480p';
+        rank = 3;
+      }
+      return { ...s, _quality: quality, _qualityRank: rank };
+    });
+
+    withQuality
+      .sort((a, b) => a._qualityRank - b._qualityRank)
+      .slice(0, 40)
+      .forEach((s) => {
       const label = (s.name || 'Stream').replace(/\s+/g, ' ').trim();
       const details = (s.title || '').replace(/[\n\r]/g, ' ').slice(0, 80);
       const item = document.createElement('div');
       item.className = 'stream-item';
       item.innerHTML = `
         <div class="stream-item-info">
-          <div class="stream-item-name">${label}</div>
+          <div class="stream-item-name">
+            <span class="stream-quality-badge">${s._quality}</span>
+            <span>${label}</span>
+          </div>
           <div class="stream-item-details">${details}${details.length >= 80 ? '…' : ''}</div>
         </div>
       `;
