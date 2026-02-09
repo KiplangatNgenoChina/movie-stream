@@ -694,7 +694,7 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
   streamError.classList.add('hidden');
   streamError.textContent = '';
   const pickerTitle = streamModal.querySelector('.stream-picker-title');
-  pickerTitle.textContent = getRealDebridKey() ? 'Choose a stream (RealDebrid)' : 'Choose a stream';
+  pickerTitle.textContent = 'Choose a stream';
 
   try {
     const imdbId = (await getImdbId(tmdbId, type))?.trim();
