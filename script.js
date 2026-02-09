@@ -717,10 +717,7 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
       const text = `${s.name || ''} ${s.title || ''}`.toLowerCase();
       let quality = 'Other';
       let rank = 99;
-      if (/2160p|4k|uhd/.test(text)) {
-        quality = '4K';
-        rank = 0;
-      } else if (/1080p/.test(text)) {
+      if (/1080p/.test(text)) {
         quality = '1080p';
         rank = 1;
       } else if (/720p/.test(text)) {
@@ -729,6 +726,10 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
       } else if (/480p/.test(text)) {
         quality = '480p';
         rank = 3;
+      } else if (/2160p|4k|uhd/.test(text)) {
+        // Show 4K after lower-bandwidth options
+        quality = '4K';
+        rank = 4;
       }
       return { ...s, _quality: quality, _qualityRank: rank };
     });
