@@ -13,6 +13,7 @@ const ADMIN_EMAIL = 'dickiejohns08@gmail.com'; // Only this account is treated a
 
 let auth0Client = null;
 let authUser = null;
+let authInitPromise = null;
 
 // Use local proxy when available (run server.py), else CORS proxy
 const USE_LOCAL_PROXY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -981,6 +982,9 @@ adminLink?.addEventListener('click', async (e) => {
   e.preventDefault();
   profileMenu?.classList.remove('open');
 
+  if (!auth0Client) {
+    await initAuth();
+  }
   if (!auth0Client) return;
 
   const isAuthenticated = await auth0Client.isAuthenticated();
@@ -1093,8 +1097,10 @@ function updateProfileUI() {
 }
 
 async function initAuth() {
-  if (!window.createAuth0Client) return;
-  auth0Client = await createAuth0Client({
+  if (authInitPromise) return authInitPromise;
+  if (!window.createAuth0Client) return null;
+
+  authInitPromise = createAuth0Client({
     domain: AUTH0_DOMAIN,
     clientId: AUTH0_CLIENT_ID,
     authorizationParams: {
@@ -1104,6 +1110,8 @@ async function initAuth() {
     cacheLocation: 'localstorage',
     useRefreshTokens: true,
   });
+
+  auth0Client = await authInitPromise;
 
   if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
     try {
@@ -1115,6 +1123,8 @@ async function initAuth() {
   const isAuthenticated = await auth0Client.isAuthenticated();
   authUser = isAuthenticated ? await auth0Client.getUser() : null;
   updateProfileUI();
+
+  return auth0Client;
 }
 
 // Row titles for restore (matches content rows order)
