@@ -25,9 +25,8 @@ function createAuth0ClientWrapper(options) {
   return Promise.reject(new Error('Auth0 SPA SDK not loaded'));
 }
 
-// Use local proxy when available (run server.py), else CORS proxy
+// Use local proxy when available (run server.py), else Vercel API proxy
 const USE_LOCAL_PROXY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const CORS_PROXY = 'https://corsproxy.io/?';
 
 // Torrentio (use /torrentio proxy when on localhost, else direct)
 const TORRENTIO_BASE = USE_LOCAL_PROXY ? `${window.location.origin}/torrentio` : 'https://torrentio.strem.fun';
@@ -69,7 +68,7 @@ function getCacheKey(url, params) {
   return url + '?' + new URLSearchParams(params).toString();
 }
 
-// Fetch from TMDB API (local proxy or CORS proxy)
+// Fetch from TMDB API (local proxy or Vercel API proxy)
 async function fetchFromTMDB(url, params = {}, skipCache = false) {
   const searchParams = new URLSearchParams(params);
   const cacheKey = getCacheKey(url, params);
@@ -80,7 +79,6 @@ async function fetchFromTMDB(url, params = {}, skipCache = false) {
   }
 
   const path = url.replace(API_BASE, '');
-  const apiUrl = `${url}?api_key=${API_KEY}&${searchParams}`;
 
   // Try local proxy first (when using server.py - adds api_key server-side)
   if (USE_LOCAL_PROXY) {
@@ -98,9 +96,9 @@ async function fetchFromTMDB(url, params = {}, skipCache = false) {
     }
   }
 
-  // Fallback to CORS proxy
-  const proxyUrl = CORS_PROXY + encodeURIComponent(apiUrl);
-  const res = await fetch(proxyUrl);
+  // Vercel API proxy (no CORS issues, key lives in env)
+  const apiUrl = `/api/tmdb?path=${encodeURIComponent(path.replace(/^\//, ''))}${searchParams.toString() ? '&' + searchParams.toString() : ''}`;
+  const res = await fetch(apiUrl);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.status_message || data.message || `API error: ${res.status}`);
