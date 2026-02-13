@@ -344,7 +344,7 @@
       <button class="modal-close settings-close" aria-label="Close">&times;</button>
       <h2 class="settings-title">Settings</h2>
       <div class="settings-section">
-        <p class="settings-hint">RealDebrid: Add <code>REALDEBRID_KEY=your_key</code> to a <code>.env</code> file in the project folder when running <code>server.py</code>. The key stays on the server and is never sent to the browser.</p>
+        <p class="settings-hint">Playback uses StremThru (ElfHosted) only. Set <code>STREMTHRU_STREAM_BASE_URL</code> to your wrapped addon base URL (no <code>/manifest.json</code>) so streams play on your site and Real-Debrid only sees one IP. In Vercel use project env; for local <code>server.py</code> use a <code>.env</code> file.</p>
         <button class="btn btn-play save-settings-btn" id="settings-ok-btn">OK</button>
       </div>
       <p class="settings-status" id="settings-status"></p>

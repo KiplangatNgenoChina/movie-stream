@@ -324,34 +324,34 @@ async function getImdbId(tmdbId, type = 'movie') {
   return data.imdb_id || null;
 }
 
-// Fetch streams from Torrentio.
-// - Local dev (USE_LOCAL_PROXY): Python server.py proxy, RD key in .env on your machine.
-// - Deployed (no local proxy): Vercel /api/streams with backend-only RD key and shared secret.
+// Fetch streams from StremThru (via /api/streams or local /torrentio proxy).
 async function getTorrentioStreams(streamId, type = 'movie') {
   const streamPath = `stream/${type}/${streamId}.json`;
 
-  // Local development: use Python proxy with server-side REALDEBRID_KEY
+  // Local development: Python server.py proxies to StremThru when STREMTHRU_STREAM_BASE_URL is set in .env
   if (USE_LOCAL_PROXY) {
     const url = `${TORRENTIO_BASE}/${streamPath}`;
     try {
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Stream fetch failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Stream fetch failed');
+      }
       const data = await res.json();
       const streams = data.streams || [];
       if (streams.length) return streams;
-    } catch {}
+    } catch (e) {
+      throw e instanceof Error ? e : new Error('No streams found for this title.');
+    }
     throw new Error('No streams found for this title.');
   }
 
-  // Deployed (e.g. Vercel): call our backend instead of Torrentio directly.
-  // Backend uses REALDEBRID_KEY from env; there is no shared secret to enter.
+  // Deployed: Vercel /api/streams fetches from StremThru (STREMTHRU_STREAM_BASE_URL in env)
   const params = new URLSearchParams({ id: String(streamId), type });
 
   const res = await fetch(`/api/streams?${params.toString()}`);
-  if (!res.ok) {
-    throw new Error('Failed to load streams.');
-  }
   const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to load streams.');
   const streams = data.streams || [];
   if (!streams.length) throw new Error('No streams found for this title.');
   return streams;
@@ -907,11 +907,11 @@ function inferVideoType(stream) {
   return '';
 }
 
-function playStream(stream) {
+async function playStream(stream) {
   streamModal.classList.remove('active');
 
   if (stream.url) {
-    // Direct URL from debrid - play in video element
+    // Direct URL from StremThru - play in video element
     const videoModal = document.getElementById('video-modal');
     const wrapper = videoModal.querySelector('.video-wrapper');
     const video = document.createElement('video');
@@ -947,10 +947,9 @@ function playStream(stream) {
     return;
   }
 
-  // If there is no direct URL, don't attempt WebTorrent. Show a friendly error.
   const videoModal = document.getElementById('video-modal');
   const wrapper = videoModal.querySelector('.video-wrapper');
-  wrapper.innerHTML = '<div class="video-loading">No direct RealDebrid streams available for this source. Try another stream option.</div>';
+  wrapper.innerHTML = '<div class="video-loading">No direct stream URL. Try another stream.</div>';
   videoModal.classList.add('active');
 }
 

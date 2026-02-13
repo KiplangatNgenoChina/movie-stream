@@ -18,9 +18,12 @@ if os.path.exists(_env_path):
                 os.environ.setdefault(k.strip(), v)
 
 API_KEY = os.environ.get("TMDB_API_KEY", "53197e900dd0dfceb105a636a0d1aa6a")
-REALDEBRID_KEY = os.environ.get("REALDEBRID_KEY", "")
 TMDB_BASE = "https://api.themoviedb.org/3"
 PORT = int(os.environ.get("PORT", 3000))
+
+# StremThru (ElfHosted) only: /torrentio/ is proxied here. Set in .env for local dev.
+STREMTHRU_BASE = (os.environ.get("STREMTHRU_STREAM_BASE_URL") or "").rstrip("/")
+STREMTHRU_TOKEN = os.environ.get("STREMTHRU_TOKEN") or ""
 
 
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
@@ -53,10 +56,20 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
     def proxy_torrentio(self):
         path = self.path[10:].lstrip("/")  # Remove /torrentio/
-        # Use server-side RealDebrid key only (never from client)
-        if REALDEBRID_KEY:
-            path = f"realdebrid={REALDEBRID_KEY}/{path}"
-        url = f"https://torrentio.strem.fun/{path}"
+        if not STREMTHRU_BASE:
+            self.send_response(503)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "error": "StremThru not configured. Set STREMTHRU_STREAM_BASE_URL in .env.",
+                "streams": [],
+            }).encode())
+            return
+        url = f"{STREMTHRU_BASE}/{path}"
+        if STREMTHRU_TOKEN:
+            url += "?" if "?" not in url else "&"
+            url += "token=" + urllib.parse.quote(STREMTHRU_TOKEN, safe="")
         try:
             req = urllib.request.Request(url, headers={"Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=15) as resp:

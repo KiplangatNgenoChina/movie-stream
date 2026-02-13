@@ -1,13 +1,9 @@
-// Vercel serverless function to fetch Torrentio streams using a backend-only
-// RealDebrid key. The RD key is read from environment variables and never
-// exposed to the browser.
-//
-// Expected env vars:
-// - REALDEBRID_KEY: your RealDebrid API key
+// Vercel serverless function to fetch streams from StremThru (ElfHosted) only.
+// Set STREMTHRU_STREAM_BASE_URL to your wrapped addon base URL (no /manifest.json).
+// Stream URLs in the response point at StremThru so playback stays on your site
+// and Real-Debrid only sees one IP. Configure debrid in StremThru, not here.
 
 export default async function handler(req, res) {
-  const { REALDEBRID_KEY } = process.env;
-
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,18 +14,23 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing id parameter' });
   }
 
+  const stremthruBase = (process.env.STREMTHRU_STREAM_BASE_URL || '').replace(/\/$/, '');
+  if (!stremthruBase) {
+    return res.status(503).json({
+      error: 'StremThru not configured. Set STREMTHRU_STREAM_BASE_URL in Vercel environment variables.',
+      streams: [],
+    });
+  }
+
   const safeType = typeof type === 'string' && (type === 'movie' || type === 'series' || type === 'tv')
     ? type
     : 'movie';
 
   const encodedId = encodeURIComponent(String(id));
   const streamPath = `stream/${safeType}/${encodedId}.json`;
-
-  const basePath = REALDEBRID_KEY
-    ? `realdebrid=${encodeURIComponent(REALDEBRID_KEY)}/${streamPath}`
-    : streamPath;
-
-  const url = `https://torrentio.strem.fun/${basePath}`;
+  let url = `${stremthruBase}/${streamPath}`;
+  const token = process.env.STREMTHRU_TOKEN;
+  if (token) url += (url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(token);
 
   try {
     const response = await fetch(url, {
@@ -38,7 +39,8 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: `Torrentio error: ${response.status}`,
+        error: `Stream source error: ${response.status}`,
+        streams: [],
       });
     }
 
@@ -48,7 +50,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ streams });
   } catch (err) {
     console.error('Error in /api/streams:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', streams: [] });
   }
 }
-
