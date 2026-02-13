@@ -911,9 +911,22 @@ async function playStream(stream) {
   streamModal.classList.remove('active');
 
   if (stream.url) {
-    // Direct URL from StremThru - play in video element
+    // StremThru URL: try <video> first; if it fails (e.g. URL returns HTML), use iframe so StremThru's page can show wait/error or redirect to video
     const videoModal = document.getElementById('video-modal');
     const wrapper = videoModal.querySelector('.video-wrapper');
+    const streamUrl = stream.url;
+
+    function showIframeFallback() {
+      wrapper.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.src = streamUrl;
+      iframe.title = 'Stream';
+      iframe.className = 'stream-iframe';
+      iframe.setAttribute('allow', 'fullscreen; encrypted-media');
+      wrapper.appendChild(iframe);
+      videoModal.classList.add('active');
+    }
+
     const video = document.createElement('video');
     video.controls = true;
     video.playsInline = true;
@@ -922,11 +935,11 @@ async function playStream(stream) {
     const type = inferVideoType(stream);
     if (type) {
       const source = document.createElement('source');
-      source.src = stream.url;
+      source.src = streamUrl;
       source.type = type;
       video.appendChild(source);
     } else {
-      video.src = stream.url;
+      video.src = streamUrl;
     }
     video.addEventListener('error', () => {
       const msg = video.error?.message || '';
@@ -936,14 +949,25 @@ async function playStream(stream) {
         hint.innerHTML = 'Firefox may not support this stream format. Try Chrome, or select a stream that ends in .mp4.';
         wrapper.insertBefore(hint, wrapper.firstChild);
       }
+      // StremThru often returns HTML (wait/error page) not raw video; fall back to iframe so that page can load or redirect
+      showIframeFallback();
+    });
+    video.addEventListener('loadeddata', () => {
+      // Video loaded successfully; keep volume controls
+      wrapper.insertAdjacentHTML('beforeend', '<div class="custom-volume-control"><button class="volume-btn" aria-label="Volume"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button><input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1"><button class="cc-btn" aria-label="Subtitles" title="Subtitles"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H6v-2h12v2z"/></svg></button><div class="subtitle-panel"><div class="subtitle-hint">Loading subtitles...</div><input type="text" class="subtitle-url-input" placeholder="Or paste .vtt URL"><button class="btn btn-play load-subtitle-btn">Load</button></div></div>');
+      attachVolumeControl(wrapper);
+      autoLoadSubtitles(wrapper.querySelector('video'), wrapper);
     });
     wrapper.innerHTML = '';
     wrapper.appendChild(video);
-    wrapper.insertAdjacentHTML('beforeend', '<div class="custom-volume-control"><button class="volume-btn" aria-label="Volume"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button><input type="range" class="volume-slider" min="0" max="1" step="0.05" value="1"><button class="cc-btn" aria-label="Subtitles" title="Subtitles"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm0-4H6v-2h12v2z"/></svg></button><div class="subtitle-panel"><div class="subtitle-hint">Loading subtitles...</div><input type="text" class="subtitle-url-input" placeholder="Or paste .vtt URL"><button class="btn btn-play load-subtitle-btn">Load</button></div></div>');
-    attachVolumeControl(wrapper);
-    autoLoadSubtitles(wrapper.querySelector('video'), wrapper);
     videoModal.classList.add('active');
     video.play().catch(() => {});
+    // If video never loads (e.g. URL returns HTML), fall back to iframe after a short delay
+    setTimeout(() => {
+      if (wrapper.contains(video) && video.readyState < 2) {
+        showIframeFallback();
+      }
+    }, 3500);
     return;
   }
 
