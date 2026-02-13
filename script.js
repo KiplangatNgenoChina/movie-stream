@@ -703,7 +703,12 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
     }
     currentMediaContext = { imdbId, type, season, episode };
     const streamId = type === 'series' ? `${imdbId}:${season}:${episode}` : imdbId;
-    const streams = await getTorrentioStreams(streamId, type);
+    let streams = await getTorrentioStreams(streamId, type);
+    // Exclude [RD download] streams — they often return "file removed for copyright infringement"
+    streams = streams.filter((s) => {
+      const text = `${s.name || ''} ${s.title || ''}`;
+      return !text.includes('[RD download]');
+    });
     streamLoading.classList.add('hidden');
 
     if (!streams.length) {
