@@ -1122,10 +1122,6 @@ function resetSearchUI() {
   });
 }
 
-// Register Monetag verification service worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
 
 // Init (show loading screen only on first open)
 initAuth().catch(() => {});
