@@ -28,9 +28,6 @@ function createAuth0ClientWrapper(options) {
 // Use local proxy when available (run server.py), else Vercel API proxy
 const USE_LOCAL_PROXY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// Torrentio (use /torrentio proxy when on localhost, else direct)
-const TORRENTIO_BASE = USE_LOCAL_PROXY ? `${window.location.origin}/torrentio` : 'https://torrentio.strem.fun';
-
 // Wyzie Subs (free subtitle API; use /subs proxy when on localhost)
 const SUBS_BASE = USE_LOCAL_PROXY ? `${window.location.origin}/subs` : 'https://sub.wyzie.ru';
 
@@ -317,46 +314,14 @@ async function loadMovies(showLoadingScreen = false) {
   }
 }
 
-// Get IMDb ID from TMDB (Torrentio uses IMDb IDs, not TMDB)
+// Get IMDb ID from TMDB (for subtitles)
 async function getImdbId(tmdbId, type = 'movie') {
   const path = (type === 'tv' || type === 'series') ? `tv/${tmdbId}/external_ids` : `movie/${tmdbId}/external_ids`;
   const data = await fetchFromTMDB(`${API_BASE}/${path}`);
   return data.imdb_id || null;
 }
 
-// Fetch streams from StremThru (via /api/streams or local /torrentio proxy).
-async function getTorrentioStreams(streamId, type = 'movie') {
-  const streamPath = `stream/${type}/${streamId}.json`;
-
-  // Local development: Python server.py proxies to StremThru when STREMTHRU_STREAM_BASE_URL is set in .env
-  if (USE_LOCAL_PROXY) {
-    const url = `${TORRENTIO_BASE}/${streamPath}`;
-    try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Stream fetch failed');
-      }
-      const data = await res.json();
-      const streams = data.streams || [];
-      if (streams.length) return streams;
-    } catch (e) {
-      throw e instanceof Error ? e : new Error('No streams found for this title.');
-    }
-    throw new Error('No streams found for this title.');
-  }
-
-  // Deployed: Vercel /api/streams fetches from StremThru (STREMTHRU_STREAM_BASE_URL in env)
-  const params = new URLSearchParams({ id: String(streamId), type });
-  const res = await fetch(`/api/streams?${params.toString()}`);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Failed to load streams.');
-  const streams = data.streams || [];
-  if (streams.length) return streams;
-  throw new Error('No streams found for this title.');
-}
-
-// Fetch streams from Consumet (free alternative when StremThru is not configured).
+// Fetch streams from Consumet (primary source). Set CONSUMET_API_BASE_URL in Vercel.
 async function getConsumetStreams(tmdbId, type = 'movie', season = 1, episode = 1) {
   const params = new URLSearchParams({
     tmdbId: String(tmdbId),
@@ -431,14 +396,14 @@ function closeMovieModal() {
 movieModal.querySelector('.modal-close').addEventListener('click', closeMovieModal);
 movieModal.querySelector('.modal-backdrop').addEventListener('click', closeMovieModal);
 
-// Play button in modal - open Torrentio stream picker
+// Play button in modal - open stream picker (Consumet)
 movieModal.querySelector('.modal-play').addEventListener('click', () => {
   const movieId = movieModal.dataset.movieId;
   const type = movieModal.dataset.type || 'movie';
   if (movieId) openStreamPicker(movieId, type);
 });
 
-// Hero Play - open Torrentio stream picker
+// Hero Play - open stream picker
 document.getElementById('hero-play-btn')?.addEventListener('click', () => {
   const movieId = document.getElementById('hero-play-btn')?.dataset.movieId;
   if (movieId) openStreamPicker(movieId, 'movie');
@@ -713,30 +678,13 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
   pickerTitle.textContent = 'Choose a stream';
 
   try {
-    let streams = [];
     const imdbId = (await getImdbId(tmdbId, type))?.trim();
-    if (imdbId) {
-      currentMediaContext = { imdbId, type, season, episode };
-      const streamId = type === 'series' ? `${imdbId}:${season}:${episode}` : imdbId;
-      try {
-        streams = await getTorrentioStreams(streamId, type);
-        // Exclude [RD download] streams — they often return "file removed for copyright infringement"
-        streams = streams.filter((s) => {
-          const text = `${s.name || ''} ${s.title || ''}`;
-          return !text.includes('[RD download]');
-        });
-      } catch (_) {
-        streams = [];
-      }
-    }
-    // Fallback: Consumet (free) when StremThru is not configured or returns no streams
-    if (!streams.length) {
-      streams = await getConsumetStreams(tmdbId, type, season || 1, episode || 1);
-    }
+    if (imdbId) currentMediaContext = { imdbId, type, season, episode };
+    const streams = await getConsumetStreams(tmdbId, type, season || 1, episode || 1);
     streamLoading.classList.add('hidden');
 
     if (!streams.length) {
-      streamError.textContent = 'No streams found for this title.';
+      streamError.textContent = 'No streams found. Set CONSUMET_API_BASE_URL (self-hosted Consumet) in Vercel env.';
       streamError.classList.remove('hidden');
       return;
     }

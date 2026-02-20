@@ -345,14 +345,14 @@
       <button class="modal-close settings-close" aria-label="Close">&times;</button>
       <h2 class="settings-title">Settings</h2>
       <div class="settings-section">
-        <p class="settings-hint">Playback: set <code>STREMTHRU_STREAM_BASE_URL</code> (ElfHosted, paid) and/or <code>CONSUMET_API_BASE_URL</code> (self-hosted Consumet, free). If StremThru is not set, the site falls back to Consumet when configured. In Vercel use project env; for local <code>server.py</code> use a <code>.env</code> file.</p>
+        <p class="settings-hint">Playback uses Consumet only. Set <code>CONSUMET_API_BASE_URL</code> to your self-hosted Consumet API base (e.g. <code>https://your-consumet.vercel.app/movies/flixhq</code>). Self-host at <a href="https://github.com/consumet/api.consumet.org" target="_blank" rel="noopener">github.com/consumet/api.consumet.org</a>. In Vercel use project env.</p>
         <button class="btn btn-play save-settings-btn" id="settings-ok-btn">OK</button>
       </div>
       <p class="settings-status" id="settings-status"></p>
     </div>
   </div>
 
-  <!-- Stream Picker Modal (Torrentio) -->
+  <!-- Stream Picker Modal (Consumet) -->
   <div class="modal" id="stream-modal">
     <div class="modal-backdrop"></div>
     <div class="modal-content stream-picker-content">

@@ -2,8 +2,6 @@
 """Simple server that serves static files and proxies TMDB API requests to avoid CORS."""
 import http.server
 import urllib.request
-import urllib.parse
-import json
 import os
 
 # Load .env if present
@@ -21,17 +19,10 @@ API_KEY = os.environ.get("TMDB_API_KEY", "53197e900dd0dfceb105a636a0d1aa6a")
 TMDB_BASE = "https://api.themoviedb.org/3"
 PORT = int(os.environ.get("PORT", 3000))
 
-# StremThru (ElfHosted) only: /torrentio/ is proxied here. Set in .env for local dev.
-STREMTHRU_BASE = (os.environ.get("STREMTHRU_STREAM_BASE_URL") or "").rstrip("/")
-STREMTHRU_TOKEN = os.environ.get("STREMTHRU_TOKEN") or ""
-
-
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/"):
             self.proxy_tmdb()
-        elif self.path.startswith("/torrentio/"):
-            self.proxy_torrentio()
         elif self.path.startswith("/subs/"):
             self.proxy_subs()
         else:
@@ -45,34 +36,6 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         try:
             req = urllib.request.Request(url, headers={"Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=10) as resp:
-                data = resp.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
-                self.wfile.write(data)
-        except Exception as e:
-            self.send_error(502, str(e))
-
-    def proxy_torrentio(self):
-        path = self.path[10:].lstrip("/")  # Remove /torrentio/
-        if not STREMTHRU_BASE:
-            self.send_response(503)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            self.wfile.write(json.dumps({
-                "error": "StremThru not configured. Set STREMTHRU_STREAM_BASE_URL in .env.",
-                "streams": [],
-            }).encode())
-            return
-        url = f"{STREMTHRU_BASE}/{path}"
-        if STREMTHRU_TOKEN:
-            url += "?" if "?" not in url else "&"
-            url += "token=" + urllib.parse.quote(STREMTHRU_TOKEN, safe="")
-        try:
-            req = urllib.request.Request(url, headers={"Accept": "application/json"})
-            with urllib.request.urlopen(req, timeout=15) as resp:
                 data = resp.read()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")

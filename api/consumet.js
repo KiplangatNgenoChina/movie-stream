@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing tmdbId', streams: [] });
   }
 
-  const { TMDB_API_KEY } = process.env;
+  const TMDB_API_KEY = process.env.TMDB_API_KEY || '53197e900dd0dfceb105a636a0d1aa6a';
   if (!TMDB_API_KEY) {
     return res.status(503).json({ error: 'TMDB_API_KEY required for Consumet lookup.', streams: [] });
   }

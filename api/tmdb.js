@@ -5,7 +5,7 @@
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 export default async function handler(req, res) {
-  const { TMDB_API_KEY } = process.env;
+  const TMDB_API_KEY = process.env.TMDB_API_KEY || '53197e900dd0dfceb105a636a0d1aa6a';
   if (!TMDB_API_KEY) {
     return res.status(500).json({ status_message: 'TMDB_API_KEY is not configured on the server.' });
   }
