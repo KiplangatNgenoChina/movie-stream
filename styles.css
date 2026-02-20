@@ -1021,57 +1021,6 @@ h1, h2 {
   border: none;
 }
 
-.iframe-player-hint {
-  position: absolute;
-  bottom: 16px;
-  left: 16px;
-  z-index: 25;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.iframe-player-hint kbd {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.5rem;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.iframe-fullscreen-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  z-index: 25;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: white;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.iframe-fullscreen-btn:hover {
-  background: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.iframe-fullscreen-btn svg {
-  flex-shrink: 0;
-}
-
 .custom-volume-control {
   position: absolute;
   bottom: 50px;

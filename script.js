@@ -675,32 +675,9 @@ function play111moviesEmbed(tmdbId, type, season, episode) {
   const url = get111moviesUrl(tmdbId, type, season, episode);
   const videoModal = document.getElementById('video-modal');
   const wrapper = videoModal.querySelector('.video-wrapper');
-  wrapper.innerHTML = `
-    <iframe src="${url}" title="111movies" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
-    <div class="iframe-player-hint">Press <kbd>F</kbd> for fullscreen</div>
-    <button type="button" class="iframe-fullscreen-btn" aria-label="Fullscreen" title="Fullscreen (F)">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-      <span class="iframe-fullscreen-label">Fullscreen</span>
-    </button>
-  `;
-  const fsBtn = wrapper.querySelector('.iframe-fullscreen-btn');
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      wrapper.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen();
-    }
-  };
-  fsBtn.addEventListener('click', toggleFullscreen);
+  wrapper.innerHTML = `<iframe src="${url}" title="111movies" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
   videoModal.classList.add('active');
 }
-
-// Single listener for fullscreen change (updates iframe fullscreen button label)
-document.addEventListener('fullscreenchange', () => {
-  const wrapper = document.getElementById('video-wrapper');
-  const label = wrapper?.querySelector('.iframe-fullscreen-label');
-  if (label) label.textContent = document.fullscreenElement === wrapper ? 'Exit fullscreen' : 'Fullscreen';
-});
 
 // F key for fullscreen when video modal is open (iframe player)
 document.addEventListener('keydown', (e) => {
