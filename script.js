@@ -653,8 +653,9 @@ function closeEpisodeModal() {
 episodeModal?.querySelector('.episode-modal-close')?.addEventListener('click', closeEpisodeModal);
 episodeModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeEpisodeModal);
 
-// 111movies primary player
+// Embed players: 111movies + VidSrc
 const E111MOVIES_BASE = 'https://111movies.com';
+const EVIDSRC_BASE = 'https://vidsrc.online';
 
 function get111moviesUrl(tmdbId, type, season, episode) {
   const id = String(tmdbId);
@@ -665,6 +666,14 @@ function get111moviesUrl(tmdbId, type, season, episode) {
   return `${E111MOVIES_BASE}/movie/${id}?${autoplay}`;
 }
 
+function getVidsrcUrl(tmdbId, type, season, episode) {
+  const id = String(tmdbId);
+  if (type === 'tv' || type === 'series') {
+    return `${EVIDSRC_BASE}/embed/tv/${id}/${season || 1}/${episode || 1}`;
+  }
+  return `${EVIDSRC_BASE}/embed/movie/${id}`;
+}
+
 function play111moviesEmbed(tmdbId, type, season, episode) {
   closeMovieModal();
   closeEpisodeModal();
@@ -672,10 +681,37 @@ function play111moviesEmbed(tmdbId, type, season, episode) {
     currentHlsInstance.destroy();
     currentHlsInstance = null;
   }
-  const url = get111moviesUrl(tmdbId, type, season, episode);
   const videoModal = document.getElementById('video-modal');
   const wrapper = videoModal.querySelector('.video-wrapper');
-  wrapper.innerHTML = `<iframe src="${url}" title="111movies" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+  videoModal.dataset.embedTmdbId = String(tmdbId);
+  videoModal.dataset.embedType = type === 'tv' || type === 'series' ? 'tv' : 'movie';
+  videoModal.dataset.embedSeason = String(season || 1);
+  videoModal.dataset.embedEpisode = String(episode || 1);
+
+  const initialUrl = get111moviesUrl(tmdbId, type, season, episode);
+  wrapper.innerHTML = `
+    <div class="embed-source-bar">
+      <span class="embed-source-label">Source:</span>
+      <button type="button" class="embed-source-btn active" data-source="111movies">111movies</button>
+      <button type="button" class="embed-source-btn" data-source="vidsrc">VidSrc</button>
+    </div>
+    <iframe src="${initialUrl}" title="Watch" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+  `;
+
+  const iframe = wrapper.querySelector('iframe');
+  wrapper.querySelectorAll('.embed-source-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const source = btn.dataset.source;
+      const id = videoModal.dataset.embedTmdbId;
+      const t = videoModal.dataset.embedType;
+      const s = videoModal.dataset.embedSeason;
+      const e = videoModal.dataset.embedEpisode;
+      const url = source === 'vidsrc' ? getVidsrcUrl(id, t, s, e) : get111moviesUrl(id, t, s, e);
+      iframe.src = url;
+      wrapper.querySelectorAll('.embed-source-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    });
+  });
+
   videoModal.classList.add('active');
 }
 

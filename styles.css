@@ -1021,6 +1021,52 @@ h1, h2 {
   border: none;
 }
 
+.embed-source-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.75);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.embed-source-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.embed-source-btn {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.embed-source-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.embed-source-btn.active {
+  background: var(--accent-red, #e50914);
+  border-color: var(--accent-red, #e50914);
+  color: white;
+}
+
+.video-wrapper:has(.embed-source-bar) iframe {
+  top: 44px;
+  height: calc(100% - 44px);
+}
+
 .custom-volume-control {
   position: absolute;
   bottom: 50px;
