@@ -331,7 +331,8 @@ async function getConsumetStreams(tmdbId, type = 'movie', season = 1, episode = 
   });
   const res = await fetch(`/api/consumet?${params.toString()}`);
   const data = await res.json().catch(() => ({}));
-  return Array.isArray(data.streams) ? data.streams : [];
+  const streams = Array.isArray(data.streams) ? data.streams : [];
+  return { streams, ok: res.ok, error: data.error };
 }
 
 // Row carousel navigation
@@ -680,11 +681,16 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
   try {
     const imdbId = (await getImdbId(tmdbId, type))?.trim();
     if (imdbId) currentMediaContext = { imdbId, type, season, episode };
-    const streams = await getConsumetStreams(tmdbId, type, season || 1, episode || 1);
+    const result = await getConsumetStreams(tmdbId, type, season || 1, episode || 1);
+    const streams = result.streams;
     streamLoading.classList.add('hidden');
 
     if (!streams.length) {
-      streamError.textContent = 'No streams found. Set CONSUMET_API_BASE_URL (self-hosted Consumet) in Vercel env.';
+      if (!result.ok) {
+        streamError.textContent = 'Consumet not configured or error. Set CONSUMET_API_BASE_URL in Vercel, then redeploy (Deployments → Redeploy).';
+      } else {
+        streamError.textContent = 'No streams found for this title. Try another title or check your Consumet instance.';
+      }
       streamError.classList.remove('hidden');
       return;
     }
