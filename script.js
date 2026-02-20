@@ -321,20 +321,6 @@ async function getImdbId(tmdbId, type = 'movie') {
   return data.imdb_id || null;
 }
 
-// Fetch streams from Consumet (primary source). Set CONSUMET_API_BASE_URL in Vercel.
-async function getConsumetStreams(tmdbId, type = 'movie', season = 1, episode = 1) {
-  const params = new URLSearchParams({
-    tmdbId: String(tmdbId),
-    type: type === 'series' ? 'tv' : type,
-    season: String(season),
-    episode: String(episode),
-  });
-  const res = await fetch(`/api/consumet?${params.toString()}`);
-  const data = await res.json().catch(() => ({}));
-  const streams = Array.isArray(data.streams) ? data.streams : [];
-  return { streams, ok: res.ok, error: data.error };
-}
-
 // Row carousel navigation
 document.querySelectorAll('.row-nav-left').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -397,17 +383,23 @@ function closeMovieModal() {
 movieModal.querySelector('.modal-close').addEventListener('click', closeMovieModal);
 movieModal.querySelector('.modal-backdrop').addEventListener('click', closeMovieModal);
 
-// Play button in modal - open stream picker (Consumet)
+// Play button in modal - play 111movies immediately (movie) or open episode picker (TV)
 movieModal.querySelector('.modal-play').addEventListener('click', () => {
   const movieId = movieModal.dataset.movieId;
   const type = movieModal.dataset.type || 'movie';
-  if (movieId) openStreamPicker(movieId, type);
+  if (!movieId) return;
+  if (type === 'tv') {
+    const title = movieModal.querySelector('.modal-title')?.textContent || '';
+    openEpisodePicker({ id: movieId, title, type: 'tv' });
+  } else {
+    play111moviesEmbed(movieId, 'movie', 1, 1);
+  }
 });
 
-// Hero Play - open stream picker
+// Hero Play - play 111movies immediately
 document.getElementById('hero-play-btn')?.addEventListener('click', () => {
   const movieId = document.getElementById('hero-play-btn')?.dataset.movieId;
-  if (movieId) openStreamPicker(movieId, 'movie');
+  if (movieId) play111moviesEmbed(movieId, 'movie', 1, 1);
 });
 
 // Hero More Info - open movie modal
@@ -586,7 +578,7 @@ function renderSearchResults(items, query = '') {
     card.querySelector('.btn-play').addEventListener('click', (e) => {
       e.stopPropagation();
       if (item.type === 'tv') openEpisodePicker(item);
-      else openStreamPicker(item.id, 'movie');
+      else play111moviesEmbed(item.id, 'movie', 1, 1);
     });
     card.querySelector('.search-result-card-info').addEventListener('click', (e) => {
       if (!e.target.closest('.btn')) openDetailModal(item);
@@ -644,7 +636,7 @@ async function openEpisodePicker(show) {
         `;
         card.addEventListener('click', () => {
           closeEpisodeModal();
-          openStreamPicker(showId, 'series', season, ep.episode_number);
+          play111moviesEmbed(showId, 'series', season, ep.episode_number);
         });
         episodeList.appendChild(card);
       });
@@ -661,12 +653,7 @@ function closeEpisodeModal() {
 episodeModal?.querySelector('.episode-modal-close')?.addEventListener('click', closeEpisodeModal);
 episodeModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeEpisodeModal);
 
-// Stream Picker Modal
-const streamModal = document.getElementById('stream-modal');
-const streamList = document.getElementById('stream-list');
-const streamLoading = document.getElementById('stream-loading');
-const streamError = document.getElementById('stream-error');
-
+// 111movies primary player
 const E111MOVIES_BASE = 'https://111movies.com';
 
 function get111moviesUrl(tmdbId, type, season, episode) {
@@ -678,7 +665,8 @@ function get111moviesUrl(tmdbId, type, season, episode) {
 }
 
 function play111moviesEmbed(tmdbId, type, season, episode) {
-  streamModal.classList.remove('active');
+  closeMovieModal();
+  closeEpisodeModal();
   if (currentHlsInstance) {
     currentHlsInstance.destroy();
     currentHlsInstance = null;
@@ -686,101 +674,30 @@ function play111moviesEmbed(tmdbId, type, season, episode) {
   const url = get111moviesUrl(tmdbId, type, season, episode);
   const videoModal = document.getElementById('video-modal');
   const wrapper = videoModal.querySelector('.video-wrapper');
-  wrapper.innerHTML = `<iframe src="${url}" title="111movies" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+  wrapper.innerHTML = `
+    <iframe src="${url}" title="111movies" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+    <button type="button" class="iframe-fullscreen-btn" aria-label="Fullscreen" title="Fullscreen">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <span class="iframe-fullscreen-label">Fullscreen</span>
+    </button>
+  `;
+  const fsBtn = wrapper.querySelector('.iframe-fullscreen-btn');
+  fsBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      wrapper.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  });
   videoModal.classList.add('active');
 }
 
-async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1) {
-  closeMovieModal();
-  closeEpisodeModal();
-  streamModal.classList.add('active');
-  streamList.innerHTML = '';
-  streamLoading.classList.remove('hidden');
-  streamError.classList.add('hidden');
-  streamError.textContent = '';
-  const pickerTitle = streamModal.querySelector('.stream-picker-title');
-  pickerTitle.textContent = 'Choose how to watch';
-  const divider = document.getElementById('stream-picker-divider');
-  if (divider) divider.style.display = 'flex';
-  const btn111 = document.getElementById('stream-option-111movies');
-  if (btn111) {
-    btn111.onclick = () => play111moviesEmbed(tmdbId, type, season || 1, episode || 1);
-  }
-
-  try {
-    const imdbId = (await getImdbId(tmdbId, type))?.trim();
-    if (imdbId) currentMediaContext = { imdbId, type, season, episode };
-    const result = await getConsumetStreams(tmdbId, type, season || 1, episode || 1);
-    const streams = result.streams;
-    streamLoading.classList.add('hidden');
-
-    if (!streams.length) {
-      if (!result.ok) {
-        streamError.textContent = 'Consumet not configured or error. Set CONSUMET_API_BASE_URL in Vercel, then redeploy (Deployments → Redeploy).';
-      } else {
-        streamError.textContent = 'No Consumet streams for this title. You can still watch on 111movies above, or try another title.';
-      }
-      streamError.classList.remove('hidden');
-      if (divider) divider.style.display = 'none';
-      return;
-    }
-
-    if (divider) divider.style.display = 'flex';
-
-    // Sort streams by quality (4K, 1080p, 720p, etc.) and format (MP4 first for Firefox)
-    const withQuality = streams.map((s) => {
-      const text = `${s.name || ''} ${s.title || ''}`.toLowerCase();
-      const isMp4 = /\.mp4(\?|$)/i.test(s.url || '') || text.includes('.mp4');
-      let quality = 'Other';
-      let rank = 99;
-      if (/1080p/.test(text)) {
-        quality = '1080p';
-        rank = 1;
-      } else if (/720p/.test(text)) {
-        quality = '720p';
-        rank = 2;
-      } else if (/480p/.test(text)) {
-        quality = '480p';
-        rank = 3;
-      } else if (/2160p|4k|uhd/.test(text)) {
-        quality = '4K';
-        rank = 4;
-      }
-      return { ...s, _quality: quality, _qualityRank: rank, _isMp4: isMp4 };
-    });
-
-    withQuality
-      .sort((a, b) => {
-        if (a._qualityRank !== b._qualityRank) return a._qualityRank - b._qualityRank;
-        return (b._isMp4 ? 1 : 0) - (a._isMp4 ? 1 : 0);
-      })
-      .slice(0, 40)
-      .forEach((s) => {
-      const label = (s.name || 'Stream').replace(/\s+/g, ' ').trim();
-      const details = (s.title || '').replace(/[\n\r]/g, ' ').slice(0, 80);
-      const formatBadge = s._isMp4 ? '<span class="stream-format-badge">MP4</span>' : '';
-      const item = document.createElement('div');
-      item.className = 'stream-item';
-      item.innerHTML = `
-        <div class="stream-item-info">
-          <div class="stream-item-name">
-            <span class="stream-quality-badge">${s._quality}</span>
-            ${formatBadge}
-            <span>${label}</span>
-          </div>
-          <div class="stream-item-details">${details}${details.length >= 80 ? '…' : ''}</div>
-        </div>
-      `;
-      item.addEventListener('click', () => playStream(s));
-      streamList.appendChild(item);
-    });
-  } catch (err) {
-    streamLoading.classList.add('hidden');
-    streamError.textContent = err.message || 'Failed to load streams. You can still try 111movies above.';
-    streamError.classList.remove('hidden');
-    if (divider) divider.style.display = 'none';
-  }
-}
+// Single listener for fullscreen change (updates iframe fullscreen button label)
+document.addEventListener('fullscreenchange', () => {
+  const wrapper = document.getElementById('video-wrapper');
+  const label = wrapper?.querySelector('.iframe-fullscreen-label');
+  if (label) label.textContent = document.fullscreenElement === wrapper ? 'Exit fullscreen' : 'Fullscreen';
+});
 
 // Convert SRT to WebVTT (HTML5 video track format)
 function srtToVtt(srt) {
@@ -933,7 +850,6 @@ function isHlsUrl(stream) {
 let currentHlsInstance = null;
 
 async function playStream(stream) {
-  streamModal.classList.remove('active');
   if (currentHlsInstance) {
     currentHlsInstance.destroy();
     currentHlsInstance = null;
@@ -1003,13 +919,6 @@ async function playStream(stream) {
   wrapper.innerHTML = '<div class="video-loading">No direct stream URL. Try another stream.</div>';
   videoModal.classList.add('active');
 }
-
-function closeStreamModal() {
-  streamModal.classList.remove('active');
-}
-
-streamModal.querySelector('.stream-modal-close').addEventListener('click', closeStreamModal);
-streamModal.querySelector('.modal-backdrop').addEventListener('click', closeStreamModal);
 
 // Profile dropdown toggle
 const profileMenu = document.querySelector('.profile-menu');
@@ -1129,7 +1038,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeMovieModal();
     closeVideoModal();
-    closeStreamModal();
     closeEpisodeModal();
     adminModal?.classList.remove('active');
     document.getElementById('account-modal')?.classList.remove('active');

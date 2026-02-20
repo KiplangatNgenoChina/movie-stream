@@ -345,36 +345,14 @@
       <button class="modal-close settings-close" aria-label="Close">&times;</button>
       <h2 class="settings-title">Settings</h2>
       <div class="settings-section">
-        <p class="settings-hint">Watch options: <strong>111movies</strong> (embed) and <strong>Consumet</strong> (FlixHQ, HiMovies, Goku, SFlix, DramaCool; servers: vidcloud, upcloud). Set <code>CONSUMET_API_BASE_URL</code> and <code>TMDB_KEY</code> in the Consumet project for Consumet streams.</p>
+        <p class="settings-hint">Playback: <strong>111movies</strong> embed only. Click Play to start watching immediately.</p>
         <button class="btn btn-play save-settings-btn" id="settings-ok-btn">OK</button>
       </div>
       <p class="settings-status" id="settings-status"></p>
     </div>
   </div>
 
-  <!-- Stream Picker Modal (111movies + Consumet) -->
-  <div class="modal" id="stream-modal">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content stream-picker-content">
-      <button class="modal-close stream-modal-close" aria-label="Close">&times;</button>
-      <h2 class="stream-picker-title">Choose how to watch</h2>
-      <div class="stream-options">
-        <button type="button" class="stream-option-111movies" id="stream-option-111movies" aria-label="Watch on 111movies">
-          <span class="stream-option-icon">▶</span>
-          <span class="stream-option-label">Watch on 111movies</span>
-          <span class="stream-option-desc">Embed player · minimal ads</span>
-        </button>
-        <div class="stream-picker-divider" id="stream-picker-divider">
-          <span>Or choose a Consumet stream (FlixHQ, HiMovies, Goku, SFlix, DramaCool)</span>
-        </div>
-      </div>
-      <div class="stream-list" id="stream-list"></div>
-      <div class="stream-loading" id="stream-loading">Loading streams...</div>
-      <div class="stream-error" id="stream-error"></div>
-    </div>
-  </div>
-
-  <!-- Video Player Modal (HTML5 or 111movies iframe) -->
+  <!-- Video Player Modal (111movies iframe) -->
   <div class="modal video-modal" id="video-modal">
     <div class="modal-backdrop"></div>
     <div class="modal-content video-content">
