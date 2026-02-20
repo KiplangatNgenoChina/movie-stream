@@ -667,6 +667,29 @@ const streamList = document.getElementById('stream-list');
 const streamLoading = document.getElementById('stream-loading');
 const streamError = document.getElementById('stream-error');
 
+const E111MOVIES_BASE = 'https://111movies.com';
+
+function get111moviesUrl(tmdbId, type, season, episode) {
+  const id = String(tmdbId);
+  if (type === 'tv' || type === 'series') {
+    return `${E111MOVIES_BASE}/tv/${id}/${season || 1}/${episode || 1}`;
+  }
+  return `${E111MOVIES_BASE}/movie/${id}`;
+}
+
+function play111moviesEmbed(tmdbId, type, season, episode) {
+  streamModal.classList.remove('active');
+  if (currentHlsInstance) {
+    currentHlsInstance.destroy();
+    currentHlsInstance = null;
+  }
+  const url = get111moviesUrl(tmdbId, type, season, episode);
+  const videoModal = document.getElementById('video-modal');
+  const wrapper = videoModal.querySelector('.video-wrapper');
+  wrapper.innerHTML = `<iframe src="${url}" title="111movies" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+  videoModal.classList.add('active');
+}
+
 async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1) {
   closeMovieModal();
   closeEpisodeModal();
@@ -676,7 +699,13 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
   streamError.classList.add('hidden');
   streamError.textContent = '';
   const pickerTitle = streamModal.querySelector('.stream-picker-title');
-  pickerTitle.textContent = 'Choose a stream';
+  pickerTitle.textContent = 'Choose how to watch';
+  const divider = document.getElementById('stream-picker-divider');
+  if (divider) divider.style.display = 'flex';
+  const btn111 = document.getElementById('stream-option-111movies');
+  if (btn111) {
+    btn111.onclick = () => play111moviesEmbed(tmdbId, type, season || 1, episode || 1);
+  }
 
   try {
     const imdbId = (await getImdbId(tmdbId, type))?.trim();
@@ -689,11 +718,14 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
       if (!result.ok) {
         streamError.textContent = 'Consumet not configured or error. Set CONSUMET_API_BASE_URL in Vercel, then redeploy (Deployments → Redeploy).';
       } else {
-        streamError.textContent = 'No streams found for this title. Try another title or check your Consumet instance.';
+        streamError.textContent = 'No Consumet streams for this title. You can still watch on 111movies above, or try another title.';
       }
       streamError.classList.remove('hidden');
+      if (divider) divider.style.display = 'none';
       return;
     }
+
+    if (divider) divider.style.display = 'flex';
 
     // Sort streams by quality (4K, 1080p, 720p, etc.) and format (MP4 first for Firefox)
     const withQuality = streams.map((s) => {
@@ -744,8 +776,9 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
     });
   } catch (err) {
     streamLoading.classList.add('hidden');
-    streamError.textContent = err.message || 'Failed to load streams.';
+    streamError.textContent = err.message || 'Failed to load streams. You can still try 111movies above.';
     streamError.classList.remove('hidden');
+    if (divider) divider.style.display = 'none';
   }
 }
 

@@ -678,19 +678,80 @@ h1, h2 {
 
 /* Stream Picker */
 .stream-picker-content {
-  max-width: 500px;
-  max-height: 80vh;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .stream-picker-title {
-  padding: 1.5rem 1.5rem 0;
+  padding: 1.25rem 1.5rem 0;
   font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.stream-options {
+  padding: 0.75rem 1.5rem 0;
+}
+
+.stream-option-111movies {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(185, 28, 28, 0.1) 100%);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  text-align: left;
+}
+
+.stream-option-111movies:hover {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.25) 0%, rgba(185, 28, 28, 0.18) 100%);
+  border-color: rgba(220, 38, 38, 0.5);
+  transform: translateY(-1px);
+}
+
+.stream-option-111movies .stream-option-icon {
+  font-size: 1.25rem;
+  margin-bottom: 0.35rem;
+  opacity: 0.9;
+}
+
+.stream-option-111movies .stream-option-label {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.stream-option-111movies .stream-option-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.stream-picker-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.stream-picker-divider::before,
+.stream-picker-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .stream-list {
-  padding: 1rem 1.5rem 1.5rem;
+  padding: 0.5rem 1.5rem 1.5rem;
   overflow-y: auto;
-  max-height: 60vh;
+  max-height: 50vh;
 }
 
 .stream-item {

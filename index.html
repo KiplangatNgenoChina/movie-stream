@@ -345,31 +345,41 @@
       <button class="modal-close settings-close" aria-label="Close">&times;</button>
       <h2 class="settings-title">Settings</h2>
       <div class="settings-section">
-        <p class="settings-hint">Playback uses Consumet only. Set <code>CONSUMET_API_BASE_URL</code> to your self-hosted Consumet API base (e.g. <code>https://your-consumet.vercel.app/movies/flixhq</code>). Self-host at <a href="https://github.com/consumet/api.consumet.org" target="_blank" rel="noopener">github.com/consumet/api.consumet.org</a>. In Vercel use project env.</p>
+        <p class="settings-hint">Watch options: <strong>111movies</strong> (embed) and <strong>Consumet</strong> (FlixHQ, HiMovies, Goku, SFlix, DramaCool; servers: vidcloud, upcloud). Set <code>CONSUMET_API_BASE_URL</code> and <code>TMDB_KEY</code> in the Consumet project for Consumet streams.</p>
         <button class="btn btn-play save-settings-btn" id="settings-ok-btn">OK</button>
       </div>
       <p class="settings-status" id="settings-status"></p>
     </div>
   </div>
 
-  <!-- Stream Picker Modal (Consumet) -->
+  <!-- Stream Picker Modal (111movies + Consumet) -->
   <div class="modal" id="stream-modal">
     <div class="modal-backdrop"></div>
     <div class="modal-content stream-picker-content">
       <button class="modal-close stream-modal-close" aria-label="Close">&times;</button>
-      <h2 class="stream-picker-title">Choose a stream</h2>
+      <h2 class="stream-picker-title">Choose how to watch</h2>
+      <div class="stream-options">
+        <button type="button" class="stream-option-111movies" id="stream-option-111movies" aria-label="Watch on 111movies">
+          <span class="stream-option-icon">▶</span>
+          <span class="stream-option-label">Watch on 111movies</span>
+          <span class="stream-option-desc">Embed player · minimal ads</span>
+        </button>
+        <div class="stream-picker-divider" id="stream-picker-divider">
+          <span>Or choose a Consumet stream (FlixHQ, HiMovies, Goku, SFlix, DramaCool)</span>
+        </div>
+      </div>
       <div class="stream-list" id="stream-list"></div>
       <div class="stream-loading" id="stream-loading">Loading streams...</div>
       <div class="stream-error" id="stream-error"></div>
     </div>
   </div>
 
-  <!-- Video Player Modal -->
+  <!-- Video Player Modal (HTML5 or 111movies iframe) -->
   <div class="modal video-modal" id="video-modal">
     <div class="modal-backdrop"></div>
     <div class="modal-content video-content">
       <button class="modal-close video-close" aria-label="Close">&times;</button>
-      <div class="video-wrapper">
+      <div class="video-wrapper" id="video-wrapper">
         <video id="demo-video" controls>
           <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
           Your browser does not support the video tag.
