@@ -348,13 +348,25 @@ async function getTorrentioStreams(streamId, type = 'movie') {
 
   // Deployed: Vercel /api/streams fetches from StremThru (STREMTHRU_STREAM_BASE_URL in env)
   const params = new URLSearchParams({ id: String(streamId), type });
-
   const res = await fetch(`/api/streams?${params.toString()}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Failed to load streams.');
   const streams = data.streams || [];
-  if (!streams.length) throw new Error('No streams found for this title.');
-  return streams;
+  if (streams.length) return streams;
+  throw new Error('No streams found for this title.');
+}
+
+// Fetch streams from Consumet (free alternative when StremThru is not configured).
+async function getConsumetStreams(tmdbId, type = 'movie', season = 1, episode = 1) {
+  const params = new URLSearchParams({
+    tmdbId: String(tmdbId),
+    type: type === 'series' ? 'tv' : type,
+    season: String(season),
+    episode: String(episode),
+  });
+  const res = await fetch(`/api/consumet?${params.toString()}`);
+  const data = await res.json().catch(() => ({}));
+  return Array.isArray(data.streams) ? data.streams : [];
 }
 
 // Row carousel navigation
@@ -445,6 +457,10 @@ document.getElementById('hero-more-btn')?.addEventListener('click', () => {
 
 // Video modal close
 function closeVideoModal() {
+  if (currentHlsInstance) {
+    currentHlsInstance.destroy();
+    currentHlsInstance = null;
+  }
   videoModal.classList.remove('active');
   const wrapper = videoModal.querySelector('.video-wrapper');
   wrapper.innerHTML = `
@@ -697,18 +713,26 @@ async function openStreamPicker(tmdbId, type = 'movie', season = 1, episode = 1)
   pickerTitle.textContent = 'Choose a stream';
 
   try {
+    let streams = [];
     const imdbId = (await getImdbId(tmdbId, type))?.trim();
-    if (!imdbId) {
-      throw new Error(type === 'series' ? 'No IMDb ID for this show. Try a different series.' : 'No IMDb ID found.');
+    if (imdbId) {
+      currentMediaContext = { imdbId, type, season, episode };
+      const streamId = type === 'series' ? `${imdbId}:${season}:${episode}` : imdbId;
+      try {
+        streams = await getTorrentioStreams(streamId, type);
+        // Exclude [RD download] streams — they often return "file removed for copyright infringement"
+        streams = streams.filter((s) => {
+          const text = `${s.name || ''} ${s.title || ''}`;
+          return !text.includes('[RD download]');
+        });
+      } catch (_) {
+        streams = [];
+      }
     }
-    currentMediaContext = { imdbId, type, season, episode };
-    const streamId = type === 'series' ? `${imdbId}:${season}:${episode}` : imdbId;
-    let streams = await getTorrentioStreams(streamId, type);
-    // Exclude [RD download] streams — they often return "file removed for copyright infringement"
-    streams = streams.filter((s) => {
-      const text = `${s.name || ''} ${s.title || ''}`;
-      return !text.includes('[RD download]');
-    });
+    // Fallback: Consumet (free) when StremThru is not configured or returns no streams
+    if (!streams.length) {
+      streams = await getConsumetStreams(tmdbId, type, season || 1, episode || 1);
+    }
     streamLoading.classList.add('hidden');
 
     if (!streams.length) {
@@ -909,14 +933,26 @@ function inferVideoType(stream) {
   if (url.endsWith('.mp4') || url.endsWith('.m4v') || name.includes('.mp4')) return 'video/mp4';
   if (url.endsWith('.webm')) return 'video/webm';
   if (url.endsWith('.mkv') || name.includes('.mkv')) return 'video/x-matroska';
+  if (url.includes('.m3u8') || name.includes('m3u8') || name.includes('hls')) return 'application/vnd.apple.mpegurl';
   return '';
 }
 
+function isHlsUrl(stream) {
+  const url = (stream?.url || '').toLowerCase();
+  const type = inferVideoType(stream);
+  return url.includes('.m3u8') || type === 'application/vnd.apple.mpegurl';
+}
+
+let currentHlsInstance = null;
+
 async function playStream(stream) {
   streamModal.classList.remove('active');
+  if (currentHlsInstance) {
+    currentHlsInstance.destroy();
+    currentHlsInstance = null;
+  }
 
   if (stream.url) {
-    // StremThru URL: play in <video> only (no iframe — iframe can trigger download when server sends Content-Disposition: attachment)
     const videoModal = document.getElementById('video-modal');
     const wrapper = videoModal.querySelector('.video-wrapper');
     const video = document.createElement('video');
@@ -925,7 +961,23 @@ async function playStream(stream) {
     video.muted = false;
     video.volume = 1;
     const type = inferVideoType(stream);
-    if (type) {
+    const useHls = isHlsUrl(stream) && typeof window.Hls !== 'undefined' && window.Hls.isSupported();
+
+    if (useHls) {
+      currentHlsInstance = new window.Hls({ enableWorker: true });
+      currentHlsInstance.loadSource(stream.url);
+      currentHlsInstance.attachMedia(video);
+      currentHlsInstance.on(window.Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          const hint = document.createElement('div');
+          hint.className = 'video-error-hint';
+          hint.textContent = 'HLS stream failed. Try another server or stream.';
+          wrapper.insertBefore(hint, wrapper.firstChild);
+        }
+      });
+    } else if (type === 'application/vnd.apple.mpegurl') {
+      video.src = stream.url;
+    } else if (type) {
       const source = document.createElement('source');
       source.src = stream.url;
       source.type = type;
@@ -933,7 +985,9 @@ async function playStream(stream) {
     } else {
       video.src = stream.url;
     }
+
     video.addEventListener('error', () => {
+      if (currentHlsInstance) return;
       const msg = video.error?.message || '';
       if (msg.includes('format') || msg.includes('MIME') || video.error?.code === 3) {
         const hint = document.createElement('div');
@@ -943,7 +997,7 @@ async function playStream(stream) {
       } else {
         const hint = document.createElement('div');
         hint.className = 'video-error-hint';
-        hint.textContent = 'Stream failed to play. Try another stream.';
+        hint.textContent = 'Stream failed to play. Try another stream or server.';
         wrapper.insertBefore(hint, wrapper.firstChild);
       }
     });

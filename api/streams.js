@@ -16,10 +16,7 @@ export default async function handler(req, res) {
 
   const stremthruBase = (process.env.STREMTHRU_STREAM_BASE_URL || '').replace(/\/$/, '');
   if (!stremthruBase) {
-    return res.status(503).json({
-      error: 'StremThru not configured. Set STREMTHRU_STREAM_BASE_URL in Vercel environment variables.',
-      streams: [],
-    });
+    return res.status(200).json({ streams: [] });
   }
 
   const safeType = typeof type === 'string' && (type === 'movie' || type === 'series' || type === 'tv')

@@ -20,6 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://quge5.com/88/tag.min.js" data-zone="209846" async data-cfasync="false"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7"></script>
 </head>
 <body>
   <!-- Navigation -->
@@ -344,7 +345,7 @@
       <button class="modal-close settings-close" aria-label="Close">&times;</button>
       <h2 class="settings-title">Settings</h2>
       <div class="settings-section">
-        <p class="settings-hint">Playback uses StremThru (ElfHosted) only. Set <code>STREMTHRU_STREAM_BASE_URL</code> to your wrapped addon base URL (no <code>/manifest.json</code>) so streams play on your site and Real-Debrid only sees one IP. In Vercel use project env; for local <code>server.py</code> use a <code>.env</code> file.</p>
+        <p class="settings-hint">Playback: set <code>STREMTHRU_STREAM_BASE_URL</code> (ElfHosted, paid) and/or <code>CONSUMET_API_BASE_URL</code> (self-hosted Consumet, free). If StremThru is not set, the site falls back to Consumet when configured. In Vercel use project env; for local <code>server.py</code> use a <code>.env</code> file.</p>
         <button class="btn btn-play save-settings-btn" id="settings-ok-btn">OK</button>
       </div>
       <p class="settings-status" id="settings-status"></p>
