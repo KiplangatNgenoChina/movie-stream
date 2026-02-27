@@ -653,9 +653,10 @@ function closeEpisodeModal() {
 episodeModal?.querySelector('.episode-modal-close')?.addEventListener('click', closeEpisodeModal);
 episodeModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeEpisodeModal);
 
-// Embed players: 111movies + VidSrc
+// Embed players: 111movies + VidSrc + EmbedMaster
 const E111MOVIES_BASE = 'https://111movies.com';
 const EVIDSRC_BASE = 'https://vidsrc.online';
+const EEMBEDMASTER_BASE = 'https://embedmaster.link';
 
 function get111moviesUrl(tmdbId, type, season, episode) {
   const id = String(tmdbId);
@@ -672,6 +673,14 @@ function getVidsrcUrl(tmdbId, type, season, episode) {
     return `${EVIDSRC_BASE}/embed/tv/${id}/${season || 1}/${episode || 1}`;
   }
   return `${EVIDSRC_BASE}/embed/movie/${id}`;
+}
+
+function getEmbedmasterUrl(tmdbId, type, season, episode) {
+  const id = String(tmdbId);
+  if (type === 'tv' || type === 'series') {
+    return `${EEMBEDMASTER_BASE}/tv/${id}/${season || 1}/${episode || 1}`;
+  }
+  return `${EEMBEDMASTER_BASE}/movie/${id}`;
 }
 
 function play111moviesEmbed(tmdbId, type, season, episode) {
@@ -694,6 +703,7 @@ function play111moviesEmbed(tmdbId, type, season, episode) {
       <span class="embed-source-label">Source:</span>
       <button type="button" class="embed-source-btn active" data-source="111movies">111movies</button>
       <button type="button" class="embed-source-btn" data-source="vidsrc">VidSrc</button>
+      <button type="button" class="embed-source-btn" data-source="embedmaster">EmbedMaster</button>
     </div>
     <iframe src="${initialUrl}" title="Watch" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
   `;
@@ -706,7 +716,14 @@ function play111moviesEmbed(tmdbId, type, season, episode) {
       const t = videoModal.dataset.embedType;
       const s = videoModal.dataset.embedSeason;
       const e = videoModal.dataset.embedEpisode;
-      const url = source === 'vidsrc' ? getVidsrcUrl(id, t, s, e) : get111moviesUrl(id, t, s, e);
+      let url;
+      if (source === 'vidsrc') {
+        url = getVidsrcUrl(id, t, s, e);
+      } else if (source === 'embedmaster') {
+        url = getEmbedmasterUrl(id, t, s, e);
+      } else {
+        url = get111moviesUrl(id, t, s, e);
+      }
       iframe.src = url;
       wrapper.querySelectorAll('.embed-source-btn').forEach((b) => b.classList.toggle('active', b === btn));
     });
