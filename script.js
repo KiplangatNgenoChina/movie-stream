@@ -697,6 +697,27 @@ function play111moviesEmbed(tmdbId, type, season, episode) {
   videoModal.dataset.embedSeason = String(season || 1);
   videoModal.dataset.embedEpisode = String(episode || 1);
 
+  // Update URL so each watch has a unique, shareable link
+  const baseType = videoModal.dataset.embedType;
+  const watchPath =
+    baseType === 'tv'
+      ? `/watch/tv/${videoModal.dataset.embedTmdbId}/${videoModal.dataset.embedSeason}/${videoModal.dataset.embedEpisode}`
+      : `/watch/movie/${videoModal.dataset.embedTmdbId}`;
+  try {
+    window.history.pushState(
+      {
+        type: baseType,
+        id: videoModal.dataset.embedTmdbId,
+        season: videoModal.dataset.embedSeason,
+        episode: videoModal.dataset.embedEpisode,
+      },
+      '',
+      watchPath,
+    );
+  } catch {
+    // Ignore history errors (e.g. unsupported environments)
+  }
+
   const initialUrl = get111moviesUrl(tmdbId, type, season, episode);
   wrapper.innerHTML = `
     <div class="embed-source-bar">

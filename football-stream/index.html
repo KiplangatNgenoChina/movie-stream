@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FootyStream - Free Football Streams & Live Scores</title>
+  <meta name="description" content="FootyStream - free football streaming companion. Discover live matches, embedded streams, and live scores powered by SportSRC.">
+  <link rel="icon" href="../favicon.png" type="image/png">
+  <link rel="preconnect" href="https://api.sportsrc.org">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="./index.html" class="logo">FootyStream</a>
+      <ul class="nav-links">
+        <li><a href="#" class="active" id="nav-live">Live</a></li>
+        <li><a href="#" id="nav-upcoming">Upcoming</a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <div class="pill">Free football streaming companion</div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-backdrop"></div>
+      <div class="hero-content">
+        <h1 class="hero-title">Watch live football for free</h1>
+        <p class="hero-subtitle">
+          Browse live and upcoming matches, then open trusted embedded streams powered by SportSRC.
+        </p>
+        <div class="hero-search">
+          <input
+            id="match-search-input"
+            class="hero-search-input"
+            type="text"
+            placeholder="Search teams, leagues, or matches..."
+            autocomplete="off"
+          />
+        </div>
+        <div class="hero-meta">
+          <span class="badge">Football</span>
+          <span class="badge badge-outline" id="match-count-badge">Loading matches…</span>
+        </div>
+        <div class="hero-categories" id="hero-categories">
+          <!-- popular leagues injected by app.js -->
+        </div>
+      </div>
+      <div class="hero-gradient"></div>
+    </section>
+
+    <section class="content">
+      <section class="home-sections" id="home-sections">
+        <div class="home-row">
+          <div class="home-row-header">
+            <h2 class="home-row-title">Top leagues today</h2>
+          </div>
+          <div class="home-row-scroller" id="top-leagues-row">
+            <!-- top leagues injected by app.js -->
+          </div>
+        </div>
+
+        <div class="home-row">
+          <div class="home-row-header">
+            <h2 class="home-row-title">Top teams</h2>
+          </div>
+          <div class="home-row-scroller" id="top-teams-row">
+            <!-- top teams injected by app.js -->
+          </div>
+        </div>
+      </section>
+
+      <header class="content-header">
+        <h2 class="content-title" id="content-title">Live matches</h2>
+        <div class="filters">
+          <select id="league-filter" class="select">
+            <option value="">All competitions</option>
+          </select>
+          <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+        </div>
+      </header>
+
+      <div id="matches-grid" class="matches-grid">
+        <!-- cards injected by app.js -->
+      </div>
+
+      <div id="empty-state" class="empty-state" hidden>
+        <h3>No matches to show</h3>
+        <p>Try switching between live and upcoming, or come back closer to match time.</p>
+      </div>
+
+      <div id="error-state" class="empty-state empty-error" hidden>
+        <h3>Unable to load matches</h3>
+        <p>We couldn't reach the SportSRC API. Please try again in a moment.</p>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="stream-modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog">
+      <button class="modal-close" id="stream-modal-close" aria-label="Close">&times;</button>
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="stream-modal-title">Match stream</h2>
+          <p class="modal-subtitle" id="stream-modal-subtitle"></p>
+        </div>
+        <span class="badge badge-live" id="stream-modal-status">LIVE</span>
+      </div>
+      <div class="modal-body">
+        <div class="stream-wrapper" id="stream-wrapper">
+          <!-- iframe injected by app.js -->
+        </div>
+        <p class="stream-disclaimer">
+          Streams are provided by third-party providers (SportSRC). FootyStream does not host or rebroadcast video content.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; <span id="footer-year"></span> FootyStream. Demo companion site – no video is hosted on our servers.</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
+
