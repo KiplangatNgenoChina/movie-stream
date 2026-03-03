@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Godfather (1972) – Watch Online on StreamFlix</title>
+  <meta name="description" content="Learn more about The Godfather (1972) and watch it online on StreamFlix. See synopsis, cast, rating and direct streaming link to the full movie.">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://streamsflix.net/movie/the-godfather-238.html">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <nav class="navbar scrolled">
+    <div class="nav-left">
+      <a href="../index.html" class="logo">StreamFlix</a>
+      <ul class="nav-links">
+        <li><a href="../index.html" data-filter="movie" class="active">Movies</a></li>
+        <li><a href="../index.html#tv" data-filter="tv">TV Shows</a></li>
+        <li><a href="../index.html#anime" data-filter="anime">Anime</a></li>
+        <li><a href="../blog/index.html">Blog</a></li>
+      </ul>
+    </div>
+    <div class="nav-right">
+      <a href="../index.html" class="btn btn-info">Back to Home</a>
+    </div>
+  </nav>
+
+  <main class="content-section" style="padding-top: calc(var(--nav-height) + 32px); max-width: 1040px; margin: 0 auto; padding-inline: 4%;">
+    <section class="movie-detail" data-tmdb-id="238">
+      <div class="movie-detail-layout">
+        <div class="movie-detail-poster">
+          <div class="movie-detail-poster-inner" id="movie-poster">
+            <!-- poster image injected from TMDB -->
+          </div>
+        </div>
+        <div class="movie-detail-info">
+          <h1 class="movie-detail-title" id="movie-title">The Godfather (1972)</h1>
+          <p class="movie-detail-meta" id="movie-meta">Crime · 1972 · 2h 55m</p>
+          <p class="movie-detail-rating" id="movie-rating">Rating: loading…</p>
+          <p class="movie-detail-overview" id="movie-overview">
+            The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.
+          </p>
+
+          <a href="../watch/movie/238" class="btn btn-play" style="margin-top: 1.25rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Watch The Godfather now
+          </a>
+
+          <p class="movie-detail-note">
+            Looking for more crime epics? See our <a href="../blog/best-gangster-movies.html">Best Gangster Movies to Watch Online</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const section = document.querySelector('.movie-detail');
+      if (!section) return;
+      const tmdbId = section.dataset.tmdbId || section.getAttribute('data-tmdb-id');
+      if (!tmdbId) return;
+
+      const posterEl = document.getElementById('movie-poster');
+      const titleEl = document.getElementById('movie-title');
+      const metaEl = document.getElementById('movie-meta');
+      const ratingEl = document.getElementById('movie-rating');
+      const overviewEl = document.getElementById('movie-overview');
+
+      function formatRuntime(mins) {
+        if (!mins || Number.isNaN(+mins)) return '';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        if (!h) return m + 'm';
+        return m ? `${h}h ${m}m` : `${h}h`;
+      }
+
+      fetch(`/api/tmdb?path=${encodeURIComponent('movie/' + tmdbId)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data || data.success === false) return;
+          const title = data.title || data.name || 'The Godfather';
+          const year = (data.release_date || '').slice(0, 4) || '1972';
+          const genres = (data.genres || []).map((g) => g.name).slice(0, 3).join(', ');
+          const runtime = formatRuntime(data.runtime);
+          const rating = (data.vote_average ? data.vote_average.toFixed(1) : null);
+
+          titleEl.textContent = `${title} (${year})`;
+          const metaParts = [];
+          if (genres) metaParts.push(genres);
+          if (year) metaParts.push(year);
+          if (runtime) metaParts.push(runtime);
+          if (metaParts.length) metaEl.textContent = metaParts.join(' · ');
+
+          if (rating) {
+            ratingEl.textContent = `TMDB rating: ${rating}/10`;
+          } else {
+            ratingEl.textContent = '';
+          }
+
+          if (data.overview) {
+            overviewEl.textContent = data.overview;
+          }
+
+          if (data.poster_path && posterEl) {
+            const img = document.createElement('img');
+            img.src = 'https://image.tmdb.org/t/p/w342' + data.poster_path;
+            img.alt = title;
+            img.loading = 'lazy';
+            img.width = 342;
+            img.height = 513;
+            posterEl.innerHTML = '';
+            posterEl.appendChild(img);
+          }
+        })
+        .catch(() => {
+          // fail silently; static content still works
+        });
+    })();
+  </script>
+</body>
+</html>
+
