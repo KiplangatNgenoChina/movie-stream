@@ -34,6 +34,20 @@ const SUBS_BASE = USE_LOCAL_PROXY ? `${window.location.origin}/subs` : 'https://
 // Current media context for auto subtitle lookup (set when opening stream picker)
 let currentMediaContext = null;
 
+// Catalog URLs (for backlink / SEO export)
+const catalogUrls = new Set();
+
+function addCatalogUrlForItem(item) {
+  const id = String(item?.id ?? '');
+  if (!id) return;
+  const type = item.type === 'tv' ? 'tv' : 'movie';
+  if (type === 'tv') {
+    catalogUrls.add(`/watch/tv/${id}/1/1`);
+  } else {
+    catalogUrls.add(`/watch/movie/${id}`);
+  }
+}
+
 // Category config: endpoint, params, isTV, sortByRating (for top rated)
 const categories = {
   trending_movies: { url: `${API_BASE}/trending/movie/day`, params: {}, isTV: false },
@@ -107,7 +121,7 @@ async function fetchFromTMDB(url, params = {}, skipCache = false) {
 
 // Transform TMDB result to our movie format
 function toMovie(item) {
-  return {
+  const movie = {
     id: item.id,
     title: item.title,
     year: item.release_date ? item.release_date.slice(0, 4) : 'N/A',
@@ -117,11 +131,13 @@ function toMovie(item) {
     desc: item.overview || 'No description available.',
     type: 'movie',
   };
+  addCatalogUrlForItem(movie);
+  return movie;
 }
 
 // Transform TMDB TV result
 function toTVShow(item) {
-  return {
+  const show = {
     id: item.id,
     title: item.name,
     year: item.first_air_date ? item.first_air_date.slice(0, 4) : 'N/A',
@@ -131,6 +147,8 @@ function toTVShow(item) {
     desc: item.overview || 'No description available.',
     type: 'tv',
   };
+  addCatalogUrlForItem(show);
+  return show;
 }
 
 // Create a single movie/TV card element
@@ -1102,6 +1120,31 @@ settingsModal?.querySelector('.modal-backdrop')?.addEventListener('click', () =>
 settingsOkBtn?.addEventListener('click', () => {
   settingsModal?.classList.remove('active');
 });
+
+function exportCatalogCsv() {
+  if (!catalogUrls.size) {
+    alert('No catalog URLs collected yet. Scroll the homepage and/or run a few searches first.');
+    return;
+  }
+
+  const rows = ['url'];
+  catalogUrls.forEach((relative) => {
+    const full = new URL(relative, window.location.origin).toString();
+    rows.push(full);
+  });
+
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'streamflix-catalog-urls.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('export-catalog-btn')?.addEventListener('click', exportCatalogCsv);
 
 // Escape key
 document.addEventListener('keydown', (e) => {
